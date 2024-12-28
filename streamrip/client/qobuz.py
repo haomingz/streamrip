@@ -47,7 +47,7 @@ QOBUZ_FEATURED_KEYS = {
 class QobuzSpoofer:
     """Spoofs the information required to stream tracks from Qobuz."""
 
-    def __init__(self):
+    def __init__(self, config: Config):
         """Create a Spoofer."""
         self.seed_timezone_regex = (
             r'[a-z]\.initialSeed\("(?P<seed>[\w=]+)",window\.ut'
@@ -62,10 +62,13 @@ class QobuzSpoofer:
             r'production:{api:{appId:"(?P<app_id>\d{9})",appSecret:"(\w{32})'
         )
         self.session = None
+        self.config = config
 
     async def get_app_id_and_secrets(self) -> tuple[str, list[str]]:
         assert self.session is not None
-        async with self.session.get("https://play.qobuz.com/login", proxy=self.config.session.qobuz.proxy) as req:
+        proxy = getattr(self.config.session.qobuz, 'proxy', None)
+
+        async with self.session.get("https://play.qobuz.com/login", proxy=proxy) as req:
             login_page = await req.text()
 
         bundle_url_match = re.search(
@@ -75,7 +78,7 @@ class QobuzSpoofer:
         assert bundle_url_match is not None
         bundle_url = bundle_url_match.group(1)
 
-        async with self.session.get("https://play.qobuz.com" + bundle_url, proxy=self.config.session.qobuz.proxy) as req:
+        async with self.session.get("https://play.qobuz.com" + bundle_url, proxy=proxy) as req:
             self.bundle = await req.text()
 
         match = re.search(self.app_id_regex, self.bundle)
@@ -125,7 +128,10 @@ class QobuzSpoofer:
         return app_id, secrets_list
 
     async def __aenter__(self):
+        proxy = getattr(self.config.session.qobuz, 'proxy', None)
         self.session = aiohttp.ClientSession()
+        if proxy:
+            self.session.proxy = proxy
         return self
 
     async def __aexit__(self, *_):
@@ -380,7 +386,7 @@ class QobuzClient(Client):
         return pages
 
     async def _get_app_id_and_secrets(self) -> tuple[str, list[str]]:
-        async with QobuzSpoofer() as spoofer:
+        async with QobuzSpoofer(self.config) as spoofer:
             return await spoofer.get_app_id_and_secrets()
 
     async def _test_secret(self, secret: str) -> Optional[str]:
