@@ -65,7 +65,7 @@ class QobuzSpoofer:
 
     async def get_app_id_and_secrets(self) -> tuple[str, list[str]]:
         assert self.session is not None
-        async with self.session.get("https://play.qobuz.com/login") as req:
+        async with self.session.get("https://play.qobuz.com/login", proxy=self.config.session.qobuz.proxy) as req:
             login_page = await req.text()
 
         bundle_url_match = re.search(
@@ -75,7 +75,7 @@ class QobuzSpoofer:
         assert bundle_url_match is not None
         bundle_url = bundle_url_match.group(1)
 
-        async with self.session.get("https://play.qobuz.com" + bundle_url) as req:
+        async with self.session.get("https://play.qobuz.com" + bundle_url, proxy=self.config.session.qobuz.proxy) as req:
             self.bundle = await req.text()
 
         match = re.search(self.app_id_regex, self.bundle)
@@ -430,7 +430,7 @@ class QobuzClient(Client):
         url = f"{QOBUZ_BASE_URL}/{epoint}"
         logger.debug("api_request: endpoint=%s, params=%s", epoint, params)
         async with self.rate_limiter:
-            async with self.session.get(url, params=params) as response:
+            async with self.session.get(url, params=params, proxy=self.config.session.qobuz.proxy) as response:
                 return response.status, await response.json()
 
     @staticmethod
