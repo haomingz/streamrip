@@ -26,7 +26,6 @@ class OutdatedConfigError(Exception):
 
 @dataclass(slots=True)
 class QobuzConfig:
-    proxy: str
     use_auth_token: bool
     email_or_userid: str
     # This is an md5 hash of the plaintext password
@@ -38,6 +37,7 @@ class QobuzConfig:
     download_booklets: bool
     # Do not change
     secrets: list[str]
+    proxy: str | None = None
 
 
 @dataclass(slots=True)
