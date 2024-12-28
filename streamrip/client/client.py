@@ -49,10 +49,15 @@ class Client(ABC):
         )
 
     @staticmethod
-    async def get_session(headers: dict | None = None) -> aiohttp.ClientSession:
+    async def get_session(headers: dict | None = None, proxy: str | None = None) -> aiohttp.ClientSession:
         if headers is None:
             headers = {}
-        return aiohttp.ClientSession(
-            headers={"User-Agent": DEFAULT_USER_AGENT},
-            **headers,
-        )
+            
+        session_kwargs = {
+            "headers": {"User-Agent": DEFAULT_USER_AGENT, **headers},
+        }
+        
+        if proxy:
+            session_kwargs["proxy"] = proxy
+            
+        return aiohttp.ClientSession(**session_kwargs)
